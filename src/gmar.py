@@ -5,11 +5,34 @@ from PIL import Image
 from pathlib import Path
 
 class GMAR:
+    """
+    Gradient-weighted Multi-head Attention Rollout (GMAR) implementation for visual explanation
+    of transformer-based models like ViT.
+
+    This method computes class-specific heatmaps by combining attention heads using gradients
+    as weights and performing residual-aware rollout over layers.
+
+    Args:
+        alpha (float): Scaling factor for residual connection during rollout.
+        norm_type (str): Normalization method for gradient-based head importance ('l1' or 'l2').
+    """
     def __init__(self, alpha=1.0, norm_type='l1'):
         self.alpha = alpha
         self.norm_type = norm_type
 
     def compute(self, logits, pred_class, attn_weights, model):
+        """
+        Compute the GMAR heatmap for a given input prediction.
+
+        Args:
+            logits (torch.Tensor): Logits from the ViT classifier [1, num_classes].
+            pred_class (int): Predicted class index.
+            attn_weights (List[torch.Tensor]): Attention matrices from all transformer layers.
+            model: The full ViT model (used for gradient backprop).
+
+        Returns:
+            torch.Tensor: Normalized class-specific heatmap of shape [14, 14] (or patch grid size).
+        """
         model.zero_grad()
         target_logit = logits[0, pred_class]
         target_logit.backward(retain_graph=True)
@@ -42,6 +65,15 @@ class GMAR:
         return cls_map
 
     def plot_on_image(self, cls_map, original_image, cmap='jet', alpha=0.5):
+        """
+        Display the GMAR heatmap overlaid on the original image using matplotlib.
+
+        Args:
+            cls_map (torch.Tensor): Heatmap of shape [H, W] (typically 14x14).
+            original_image (PIL.Image): Original input image.
+            cmap (str): Colormap for heatmap.
+            alpha (float): Opacity of heatmap overlay.
+        """
         heatmap = np.array(cls_map)
         heatmap = Image.fromarray((heatmap * 255).astype(np.uint8)).resize(original_image.size, resample=Image.BILINEAR)
         heatmap = np.array(heatmap)
@@ -86,4 +118,4 @@ class GMAR:
         fig.savefig(output_path, bbox_inches='tight', dpi=300)
         plt.close(fig)
 
-        print(f"✅ GMAR overlay saved: {output_path}")
+        print(f"GMAR overlay saved: {output_path}")

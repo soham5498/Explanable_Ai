@@ -5,18 +5,31 @@ from PIL import Image
 from pathlib import Path
 
 class AttentionRollout:
+    """
+    Implements Classical Attention Rollout for Vision Transformers (ViT).
+
+    This method recursively multiplies average attention matrices across all layers
+    to compute the influence of the [CLS] token on image patches.
+
+    Args:
+        add_residual (bool): Whether to add identity (residual) connection to attention matrices.
+    """
     def __init__(self, add_residual=True):
         self.add_residual = add_residual
 
     def compute_rollout(self, attn_weights):
         """
-        Classical Attention Rollout from a list of attention matrices.
+        Computes the attention rollout by recursively multiplying attention maps across layers.
 
         Args:
-            attn_weights: List of attention maps per layer [B, H, N, N]
-        
+            attn_weights (List[torch.Tensor]): List of attention tensors from ViT blocks.
+                                               Each shape: [B, H, N, N], where
+                                               B = batch size,
+                                               H = num heads,
+                                               N = number of tokens (1 + num_patches)
+
         Returns:
-            cls_map: 2D torch.Tensor, normalized heatmap [14, 14]
+            torch.Tensor: Final 2D normalized attention map (without CLS), shape [14, 14]
         """
         device = attn_weights[0].device
         rollout = torch.eye(attn_weights[0].size(-1)).to(device)
@@ -39,7 +52,13 @@ class AttentionRollout:
 
     def save_overlay(self, cls_map, image, original_image_path, predicted_label=""):
         """
-        Saves the heatmap overlay image with attention rollout.
+        Saves the attention rollout heatmap overlay on the original image.
+
+        Args:
+            cls_map (torch.Tensor): Final rollout heatmap [H, W].
+            image (PIL.Image): Original image used for prediction.
+            original_image_path (str or Path): Original image path, used for naming.
+            predicted_label (str): Optional class name for overlay title.
         """
         output_dir = Path("./results/rollout")
         output_dir.mkdir(exist_ok=True)
@@ -62,4 +81,4 @@ class AttentionRollout:
         fig.savefig(output_path, bbox_inches='tight', dpi=300)
         plt.close(fig)
 
-        print(f"✅ Rollout overlay saved: {output_path}")
+        print(f"Rollout overlay saved: {output_path}")

@@ -6,6 +6,17 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 
 class LeGradExplainer:
+    """
+    Implements the LeGrad method for visual explanation of ViT predictions.
+    LeGrad uses gradient-weighted attention to compute token-wise importance maps,
+    providing interpretability in vision transformers.
+
+    Args:
+        attn_weights (List[torch.Tensor]): List of attention matrices from each ViT block.
+        logits (torch.Tensor): Output logits from the ViT classifier.
+        predicted_class (int): Index of the predicted class.
+        predicted_label (str): Human-readable label of the predicted class.
+    """
     def __init__(self, attn_weights, logits, predicted_class, predicted_label=""):
         self.attn_weights = attn_weights
         self.logits = logits
@@ -14,6 +25,14 @@ class LeGradExplainer:
         self.layer_maps = []
 
     def compute_layer_maps(self):
+        """
+        Backpropagates from the predicted logit to obtain gradients of attention weights.
+        Applies ReLU to retain only positive gradients and computes attention × gradient maps
+        for each transformer block.
+
+        Returns:
+            list: List of patch-level importance maps per layer (after removing [CLS]).
+        """
         c = self.logits[0, self.predicted_class]
         self.logits.grad = None
         c.backward()
@@ -27,42 +46,22 @@ class LeGradExplainer:
             gcam_no_cls = gcam_mean[:, 1:, 1:]
             patch_score = gcam_no_cls.mean(dim=-1)
             layer_maps.append(patch_score)
-            # print(f"Block {idx+1} done: patch_score shape {patch_score.shape}")
-
+            
         self.layer_maps = layer_maps
         return layer_maps
 
     def merge_heatmap(self):
+        """
+        Averages all layer-wise patch importance maps into a single heatmap.
+
+        Returns:
+            np.ndarray: Final normalized 1D patch heatmap (length = num_patches).
+        """
         merged = torch.stack(self.layer_maps).mean(dim=0)
         heatmap = merged.detach().squeeze().cpu().numpy()
         heatmap = (heatmap - heatmap.min()) / (heatmap.max() - heatmap.min() + 1e-8)
-        print(f"✅ Final LeGrad patch heatmap shape: {heatmap.shape}")
+        print(f"Final LeGrad patch heatmap shape: {heatmap.shape}")
         return heatmap
-        # merged = torch.stack(self.layer_maps).mean(dim=0)
-        # heatmap = merged.detach().squeeze().cpu().numpy()
-        # heatmap = (heatmap - heatmap.min()) / (heatmap.max() - heatmap.min() + 1e-8)
-
-        # side_len = int(heatmap.shape[0] ** 0.5)
-        # heatmap = heatmap.reshape(side_len, side_len)
-
-        # print(f"✅ Final LeGrad patch heatmap shape: {heatmap.shape}")
-        # return heatmap
-
-
-    def visualize_overlay(self, img, heatmap):
-        img_np = np.array(img.resize((224, 224))) / 255.0
-        heatmap_grid = heatmap.reshape(14, 14)
-        heatmap_tensor = torch.tensor(heatmap_grid).unsqueeze(0).unsqueeze(0)
-        heatmap_upsampled = F.interpolate(heatmap_tensor, size=(224, 224), mode='bilinear', align_corners=False)
-        heatmap_upsampled = heatmap_upsampled.squeeze().cpu().numpy()
-
-        plt.figure(figsize=(6, 6))
-        plt.imshow(img_np)
-        plt.imshow(heatmap_upsampled, cmap='jet', alpha=0.5)
-        plt.title(f"LeGrad — Predicted: {self.predicted_label}")
-
-        plt.axis('off')
-        plt.show(block=True)
         
     def save_overlay(self, img, heatmap, original_image_path):
         """
@@ -108,4 +107,4 @@ class LeGradExplainer:
         fig.savefig(output_path, bbox_inches='tight', dpi=300)
         plt.close(fig)
 
-        print(f"✅ Saved overlay: {output_path}")
+        print(f"Saved overlay: {output_path}")

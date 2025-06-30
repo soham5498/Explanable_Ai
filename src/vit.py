@@ -2,7 +2,23 @@ import torch
 from transformers import ViTImageProcessor, ViTForImageClassification
 
 class CustomViT:
+    """
+    Custom wrapper around the HuggingFace ViT (Vision Transformer) model,
+    enabling access to internal attention weights for explainability purposes.
+
+    Features:
+        - Loads a pretrained ViT model.
+        - Allows input preprocessing using the matching image processor.
+        - Performs a forward pass while capturing attention maps manually.
+    """
     def __init__(self, model_name='google/vit-base-patch16-224', device=None):
+        """
+        Initialize the CustomViT model and processor.
+
+        Args:
+            model_name (str): HuggingFace model ID or path to pretrained ViT model.
+            device (str): Device to load the model on ('cuda', 'cpu', or None).
+        """
         self.device = device or ('cuda' if torch.cuda.is_available() else 'cpu')
         self.model = ViTForImageClassification.from_pretrained(model_name).to(self.device)
         self.model.eval()
@@ -10,10 +26,32 @@ class CustomViT:
         self.imagenet_classes = [self.model.config.id2label[i] for i in range(self.model.config.num_labels)]
 
     def preprocess(self, img):
+        """
+        Preprocess a PIL image into a tensor suitable for ViT input.
+
+        Args:
+            img (PIL.Image): Input image.
+
+        Returns:
+            torch.Tensor: Preprocessed image tensor [1, 3, H, W] on the target device.
+        """
         inputs = self.processor(images=img, return_tensors='pt').to(self.device)
         return inputs['pixel_values']
 
     def forward_with_custom_attention(self, img_tensor):
+        """
+        Perform a forward pass through ViT while manually extracting per-layer attention maps.
+
+        Args:
+            img_tensor (torch.Tensor): Preprocessed image tensor [1, 3, H, W].
+
+        Returns:
+            logits (torch.Tensor): Model output logits.
+            predicted_class (int): Index of the predicted class.
+            class_name (str): Human-readable class label.
+            attn_weights (List[torch.Tensor]): List of attention maps per block,
+                                               each shaped [1, num_heads, N, N].
+        """
         attn_weights = []
         x = self.model.vit.embeddings.patch_embeddings(img_tensor)
         cls_token = self.model.vit.embeddings.cls_token.expand(x.shape[0], -1, -1)
