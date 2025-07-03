@@ -1,13 +1,12 @@
-# 🧠 ViT Explainability: LeGrad, GMAR, and Classical Rollout
+# 🧠 Vision Transformer Explainability: LeGrad, GMAR, and Classical Rollout
 
-This project implements **visual explanations** for Vision Transformers (ViTs) using three methods:
+This project provides a unified framework for **interpreting Vision Transformers (ViTs)** using three state-of-the-art explanation methods:
 
-* 🎯 **LeGrad** —  An Explainability Method for Vision Transformers via Feature Formation Sensitivity
-* 🔍 **GMAR** — Gradient-weighted Multi-head Attention Rollout
-* 🧱 **Classical Rollout** — Layer-wise attention rollout without gradients
+- 🎯 **LeGrad** — Gradient-based method using sensitivity of attention formation
+- 🔍 **GMAR** — Gradient-weighted Multi-head Attention Rollout with L1 and L2 norms
+- 🧱 **Classical Rollout** — Recursive layer-wise attention propagation (Abnar & Zuidema, 2020)
 
-All explanations are visualized as **attention heatmaps** overlaid on original input images.
-The goal is to analyze **which patches the model attends to** when making predictions.
+These methods generate **visual attention heatmaps** to understand **which regions the model focuses on** during prediction. The project also supports **quantitative evaluation** using segmentation masks.
 
 ---
 
@@ -15,95 +14,114 @@ The goal is to analyze **which patches the model attends to** when making predic
 
 ```
 project/
-├ images/                # Input images (supports .jpg/.png/.jpeg)
-├ results/               # Output folder for visualizations
-│  ├ legrad/             # Output heatmaps for LeGrad
-│  ├ gmar/               # Output heatmaps for GMAR (with prefix: l1_ or l2_)
-│  └ rollout/            # Output heatmaps for classical attention rollout
-├ src/                   # Source code directory
-│  ├ gmar.py             # GMAR explanation method
-│  ├ legrad.py           # LeGrad explanation method
-│  ├ rollout.py          # Classical attention rollout
+├ images/                # Input images for classification and visualization
+├ masks/                # Ground truth binary masks for evaluation (same name as input image, .png format)
+├ results/               # Output attention heatmaps
+│  ├ legrad/             # LeGrad overlays
+│  ├ gmar_l1/            # GMAR (L1 norm) overlays
+│  ├ gmar_l2/            # GMAR (L2 norm) overlays
+│  └ rollout/            # Classical Rollout overlays
+├ src/                   # Source files
 │  ├ vit.py              # Custom ViT wrapper with attention extraction
-│  ├ main.py             # Main driver for running explanations
-│  └ __pycache__/        # Python bytecode cache
-├ __pycache__/
-└ readme.md              # This file
+│  ├ legrad.py           # LeGrad method implementation
+│  ├ gmar.py             # GMAR method implementation
+│  ├ rollout.py          # Classical rollout implementation
+│  ├ metrics.py          # PixelAcc, IoU, and mAP metrics
+│  └ __pycache__/        # Python cache
+├ main.py                # Run visualization and evaluation
+├ readme.md              # This file
 ```
 
 ---
 
 ## 🚀 How to Use
 
-### 1. Place your input images
+### 1. Place input images
 
-Put images in the `images/` folder. Supported formats: `.jpg`, `.jpeg`, `.png`
+- Put images into the `images/` folder.
+- Add binary masks (same base filename, `.png`) into the `masks/` folder.
 
 ### 2. Run the project
 
-Navigate to the `src/` directory and run:
-
 ```bash
-cd src
 python main.py
 ```
 
-You'll be prompted to choose an explanation method:
+Choose one of the methods when prompted:
 
 ```bash
 Which method? (legrad/gmar/rollout):
 ```
 
-* `legrad`: Gradient-weighted patch sensitivity
-* `gmar`: GMAR with choice of `l1` or `l2` norm
-* `rollout`: Classical attention rollout (Abnar & Zuidema, 2020)
+### 3. View and evaluate results
+
+- Heatmaps will be saved in `results/<method>/`
+- If masks are present, the script automatically computes:
+  - **Pixel Accuracy**
+  - **Mean Intersection over Union (mIoU)**
+  - **Mean Average Precision (mAP)**
 
 ---
 
-## 🗸️ Example Output
+## 📊 Quantitative Evaluation
 
-Each method saves a heatmap overlay in its respective subfolder under `results/`:
+The project evaluates interpretability performance using three metrics:
+
+- **Pixel Accuracy**: Proportion of pixels correctly classified
+- **mIoU**: Intersection over Union between predicted and ground-truth masks
+- **mAP**: Area under the precision-recall curve
+
+These are computed after binarizing the heatmap using a **threshold of 0.5**.
+
+---
+
+## 🧪 Example Outputs
+
+**Heatmaps:**
 
 ```
 results/
-├ legrad/cat_legrad.png
-├ gmar/l1_cat_gmar.png
-├ gmar/l2_dog_gmar.png
-├ rollout/cat_rollout.png
+├ legrad/2007_000720_legrad.png
+├ gmar_l1/2007_000720_gmar.png
+├ gmar_l2/2007_000720_gmar.png
+├ rollout/2007_000720_rollout.png
 ```
 
-Titles on the images show the predicted class from the model.
+**Metrics Output:**
+```
+PixelAcc: 0.88 | IoU: 0.53 | AP: 0.85
+```
 
 ---
 
-## ⚙️ Model Used
+## ⚙️ Model Details
 
-* `google/vit-base-patch16-224` from Hugging Face
-* Pretrained on ImageNet-1K
-* Predictions and attention weights extracted using `transformers` library
+- Base model: `google/vit-base-patch16-224` (from Hugging Face)
+- Pretrained on ImageNet-1K
+- No fine-tuning; all explanations use inference-only
 
 ---
 
-## 📦 Requirements
+## 📦 Installation
 
-Install dependencies via pip:
+Install dependencies:
 
 ```bash
-pip install torch torchvision transformers matplotlib pillow numpy
+pip install torch torchvision transformers matplotlib pillow numpy scikit-learn
 ```
 
 ---
 
 ## 📚 References
 
-* [LeGrad: An Explainability Method for Vision Transformers via Feature Formation Sensitivity](arxiv.org/pdf/2404.03214)
-* [Quantifying Attention Flow in Transformers](https://arxiv.org/pdf/2005.00928)
-* [GMAR: Gradient-weighted Multi-head Attention Rollout (ICCV 2021)](https://arxiv.org/pdf/2504.19414)
+- [LeGrad: An Explainability Method for Vision Transformers (2024)](https://arxiv.org/pdf/2404.03214)
+- [GMAR: Gradient-weighted Multi-head Attention Rollout (2025)](https://arxiv.org/pdf/2504.19414)
+- [Quantifying Attention Flow in Transformers (2020)](https://arxiv.org/pdf/2005.00928)
 
 ---
 
 ## ✨ Author
 
-Prepared by \Soham Joita
-Master’s student @ OTH Amberg-Weiden
+Prepared by **Soham Joita**  
+Master’s student, OTH Amberg-Weiden  
 AI for Industrial Applications 💡
