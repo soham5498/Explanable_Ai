@@ -1,8 +1,8 @@
-# 🧠 Vision Transformer Explainability: LeGrad, GMAR, and Classical Rollout
+# 🧠 Vision Transformer Explainability: LeGrad Vs GMAR vs Classical Rollout
 
 This project provides a unified framework for **interpreting Vision Transformers (ViTs)** using three state-of-the-art explanation methods:
 
-- 🎯 **LeGrad** — Gradient-based method using sensitivity of attention formation
+- 🎯 **LeGrad** — An Explainability Method for Vision Transformers via Feature Formation Sensitivity
 - 🔍 **GMAR** — Gradient-weighted Multi-head Attention Rollout with L1 and L2 norms
 - 🧱 **Classical Rollout** — Recursive layer-wise attention propagation (Abnar & Zuidema, 2020)
 
@@ -69,7 +69,7 @@ The project evaluates interpretability performance using three metrics:
 
 - **Pixel Accuracy**: Proportion of pixels correctly classified
 - **mIoU**: Intersection over Union between predicted and ground-truth masks
-- **mAP**: Area under the precision-recall curve
+- **mAP**: Pixel-wise mean Average Precision
 
 These are computed after binarizing the heatmap using a **threshold of 0.5**.
 
