@@ -1,4 +1,4 @@
-#  Vision Transformer Explainability: LeGrad Vs GMAR vs Classical Rollout
+#  Vision Transformer Explainability: A Comparative Study of Explanable Ai methods- LeGrad Vs GMAR vs Classical Rollout
 
 This repository contains the code for the project "A Comparative Study of Explanable Ai methods: LeGrad Vs GMAR vs Classical Rollout" by Soham Joita, supervised by Prof. Dr. phil. Tatyana Ivanovska
 
